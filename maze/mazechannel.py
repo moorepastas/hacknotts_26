@@ -2,19 +2,18 @@ from typing import Dict
 
 from classes.channel import Channel
 from classes.user import User
-from maze.maze import Maze, Point, Compass
+from maze.maze import Point, Compass
+from maze.player import Player
 
 
 class MazeChannel(Channel):
-    maze: Dict[str,Maze] = {}
-    location: Dict[str,Point] = {}
+    players: Dict[str,Player] = {}
+
 
     def join(self, user:User):
         user.protocol.join(user.name(),"#maze")
-        if user.nick not in self.maze.keys():
-            self.maze[user.nick] = Maze(10,10)
-            self.maze[user.nick].generate()
-            self.location[user.nick] = Point(0,0)
+        if user.nick not in self.players.keys():
+            self.players[user.nick] = Player()
 
 
 
@@ -32,26 +31,26 @@ class MazeChannel(Channel):
                     user.protocol.privmsg("The_Dungeon_Master","#maze",f"{direction} is not a valid direction")
                     return
 
-                pos = self.location[user.nick]
-                if not self.maze[user.nick].can_go(pos.x,pos.y,comp):
+                pos = self.players[user.nick].pos
+                if not self.players[user.nick].maze.can_go(pos.x,pos.y,comp):
                     user.protocol.privmsg("The_Dungeon_Master","#maze",f"You cannot go in the direction {direction}! The heavy walls block you!")
                     return
 
                 new = [(-1,0),(0,1),(1,0),(0,-1)][comp.value]
                 new_x, new_y = pos.x + new[1], pos.y + new[0]
 
-                self.location[user.nick]  = Point(new_x,new_y)
+                self.players[user.nick].pos  = Point(new_x,new_y)
 
                 user.protocol.privmsg("The_Dungeon_Master","#maze",f"You moved {direction}")
 
             case ["dirs"|"d"]:
-                pos = self.location[user.nick]
-                user.protocol.privmsg("The_Dungeon_Master","#maze",f"You can move {", ".join([i.name for i in sorted(self.maze[user.nick].explore(pos.x,pos.y), key=lambda x: x.value)])}")
+                pos = self.players[user.nick].pos
+                user.protocol.privmsg("The_Dungeon_Master","#maze",f"You can move {", ".join([i.name for i in sorted(self.players[user.nick].maze.explore(pos.x,pos.y), key=lambda x: x.value)])}")
             case ["map"]:
-                pos = self.location[user.nick]
+                pos = self.players[user.nick].pos
                 user.protocol.privmsg("The_Dungeon_Master", "#maze","you consult the map")
 
-                lines = self.maze[user.nick].map(pos)
+                lines = self.players[user.nick].maze.map(pos)
                 print(lines.split("\n"))
                 for line in lines.split("\n"):
                     if line.strip(" ") != "":
