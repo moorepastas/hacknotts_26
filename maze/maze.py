@@ -1,20 +1,24 @@
 import random
 from dataclasses import dataclass
 from enum import Enum
-from typing import List
+from typing import List, NamedTuple
 
-@dataclass
-class Point:
+
+class Point(NamedTuple):
     x: int
     y: int
 
 
-class Compass(Enum):
-    North =0
-    South =2
-    East=1
-    West=3
 
+
+
+class Compass(Enum):
+    North =0 # -1,0
+    East=1 # 0,1
+    South =2 # 1,0
+
+    West=3 # 0,-1
+[(-1,0),(0,1),(1,0),(0,-1)]
 
 
 @dataclass
@@ -97,6 +101,7 @@ class Maze:
 
                 stack.append(current)
                 current = Point(new_x,new_y)
+
     # 'explores' a point and returns all the directions you can travel in
     def explore(self,x,y) -> List[Compass]:
          return self._maze[y][x].Directions
@@ -141,7 +146,7 @@ class Maze:
         print()
 
 if __name__ == '__main__':
-    m = Maze(4,4)
+    m = Maze(20,20)
     m.generate()
 
     m.display()

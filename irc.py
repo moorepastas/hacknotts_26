@@ -10,6 +10,7 @@ from twisted.words.protocols.irc import IRC, ERR_NICKCOLLISION, ERR_NICKNAMEINUS
 
 from classes.channel import Channel
 from classes.user import User
+from maze.mazechannel import MazeChannel
 
 
 class MockIrc(IRC):
@@ -70,7 +71,7 @@ class MockIrc(IRC):
 
 
     def irc_WHO(self, prefix,params):
-        self.sendCommand(RPL_ENDOFWHO,[params[0],":End of /WHO list"])
+        self.sendCommand(RPL_ENDOFWHO,[params[0],": End of /WHO list"])
 
     def irc_PART(self, prefix, params):
         for chan_name in params:
@@ -81,7 +82,6 @@ class MockIrc(IRC):
             chan = self.mchannels[params[0]]
 
             chan.part(self.user,"quit")
-            self.sendCommand(RPL_TOPIC, [chan.name, ":", "tets"])
 
 
     # irc command like you nickname for some reason, do not touch this unless oyu want to cry
@@ -95,7 +95,7 @@ class MockIrc(IRC):
             chan = self.mchannels[params[0]]
 
             chan.join(self.user)
-            self.sendCommand(RPL_TOPIC,  [chan.name, ":","tets"])
+            self.sendCommand(RPL_TOPIC,  [chan.name, ":",chan.topic])
             self.sendCommand(RPL_ENDOFNAMES,  [chan.name, ":", "End of /NAMES list"])
 
 
@@ -119,7 +119,7 @@ class MockIrc(IRC):
 class Server(Factory):
 
     users = {}
-    channels = {"#me": Channel("#me","talk about me")}
+    channels = {"#me": Channel("#me","talk about me"),"#maze": MazeChannel("#maze","Enter the maze")}
     def buildProtocol(self, addr: IAddress | None) -> P | None:
         return MockIrc(self.users,self.channels)
 
