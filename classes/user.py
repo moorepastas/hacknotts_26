@@ -3,6 +3,7 @@ from typing import List
 from twisted.words.protocols.irc import IRC
 
 from classes.channel import Channel
+from maze.maze import Maze, Point
 
 
 class User:
@@ -15,6 +16,7 @@ class User:
     def __init__(self, nick,protocol):
         self.protocol: IRC = protocol
         self.nick: str = nick
+        self.Maze = Maze(9,9)
 
 
     def register(self,hostname):
