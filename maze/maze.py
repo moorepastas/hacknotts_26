@@ -18,7 +18,7 @@ class Compass(Enum):
     South =2 # 1,0
 
     West=3 # 0,-1
-[(-1,0),(0,1),(1,0),(0,-1)]
+
 
 
 @dataclass
@@ -101,6 +101,12 @@ class Maze:
 
                 stack.append(current)
                 current = Point(new_x,new_y)
+        # reset the visited metrix for the user to use
+        for y in range(self.y):
+            for x in range(self.x):
+                self._maze[y][x].visited = False
+
+
 
     # 'explores' a point and returns all the directions you can travel in
     def explore(self,x,y) -> List[Compass]:
@@ -108,24 +114,6 @@ class Maze:
 
     def can_go(self,x,y,direction: Compass)->bool:
         return direction in self._maze[y][x].Directions
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
     def _display_row(self,row: List[Place]):
@@ -145,9 +133,50 @@ class Maze:
             print("+",end="")
         print()
 
+
+    # display map for the user, checks to see if a node has been visited before displaying it
+    def map(self,current:Point):
+        buf = ""
+        for y in range(self.y):
+            for x in range(self.x):
+                n = self._maze[y][x]
+
+                if current.x == x and current.y == y:
+                    buf += "O"
+                elif n.visited:
+                    buf += "X"
+                else:
+                    buf += " "
+
+                if (n.visited and Compass.East in n.Directions) or (x < self.x-1 and self._maze[y][x+1].visited and Compass.West in self._maze[y][x+1].Directions):
+                    buf += " - "
+                else:
+                    buf+="   "
+            buf+="\n"
+            # generate the in between
+            for x in range(self.x):
+                if y == self.y-1:
+                    # bottom
+                    break
+                n = self._maze[y][x]
+                n1 = self._maze[y+1][x]
+
+                if (n.visited and Compass.South in n.Directions) or (n1.visited and Compass.North in n.Directions):
+                    buf+="|"
+                else:
+                    buf += " "
+                buf += "   "
+            buf+= "\n"
+
+        return buf
+
+
+
+
 if __name__ == '__main__':
-    m = Maze(20,20)
+    m = Maze(10,10)
     m.generate()
 
     m.display()
-    print()
+
+    print(m.map(Point(0,0)))

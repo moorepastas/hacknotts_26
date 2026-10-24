@@ -47,6 +47,16 @@ class MazeChannel(Channel):
             case ["dirs"|"d"]:
                 pos = self.location[user.nick]
                 user.protocol.privmsg("The_Dungeon_Master","#maze",f"You can move {", ".join([i.name for i in sorted(self.maze[user.nick].explore(pos.x,pos.y), key=lambda x: x.value)])}")
+            case ["map"]:
+                pos = self.location[user.nick]
+                user.protocol.privmsg("The_Dungeon_Master", "#maze","you consult the map")
+
+                lines = self.maze[user.nick].map(pos)
+                print(lines.split("\n"))
+                for line in lines.split("\n"):
+                    if line.strip(" ") != "":
+                        user.protocol.privmsg("map","#maze",line)
+
 
 
 

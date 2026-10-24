@@ -71,7 +71,7 @@ class MockIrc(IRC):
 
 
     def irc_WHO(self, prefix,params):
-        self.sendCommand(RPL_ENDOFWHO,[params[0],": End of /WHO list"])
+        self.sendCommand(RPL_ENDOFWHO,[params[0],":End of /WHO list"])
 
     def irc_PART(self, prefix, params):
         for chan_name in params:
@@ -119,7 +119,8 @@ class MockIrc(IRC):
 class Server(Factory):
 
     users = {}
-    channels = {"#me": Channel("#me","talk about me"),"#maze": MazeChannel("#maze","Enter the maze")}
+    channels = {"#me": Channel("#me","talk about me"),
+                "#maze": MazeChannel("#maze","Enter the maze")}
     def buildProtocol(self, addr: IAddress | None) -> P | None:
         return MockIrc(self.users,self.channels)
 
