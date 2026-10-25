@@ -109,8 +109,13 @@ class Maze:
 
 
     # 'explores' a point and returns all the directions you can travel in
-    def explore(self,x,y) -> List[Compass]:
-         return self._maze[y][x].Directions
+    def explore(self,x,y) -> (bool,List[Compass]):
+        new= False
+        if not self._maze[y][x].visited:
+            self._maze[y][x].visited = True
+            new = True
+
+        return new,self._maze[y][x].Directions
 
     def can_go(self,x,y,direction: Compass)->bool:
         return direction in self._maze[y][x].Directions
