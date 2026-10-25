@@ -29,7 +29,9 @@ class Player:
         self.health = 3
 
         self.battle = None
-        self.skills= []
+        self.skills= [Heal(),Instant()]
+
+        self.tips = True
 
 
     def update_cooldowns(self):
@@ -44,10 +46,11 @@ class Skill:
         self._track = 0
 
     def apply(self,player):
-        pass
+        self._track = self.cooldown
+
 
     def update(self):
-        self._track = min(self._track-1,0)
+        self._track = max(self._track-1,0)
 
     def __str__(self) -> str:
         return f"{self.name} {self._track}/{self.cooldown}"
@@ -61,6 +64,7 @@ class Heal(Skill):
 
     def apply(self,player):
         player.health = player.max_health
+        super().apply(player)
 
 
 class Instant(Skill):
@@ -68,4 +72,5 @@ class Instant(Skill):
         super().__init__("instant",10)
 
     def apply(self,player):
-        player.battle.enemy.health = 0
+        player.battle.enemy.health = 0#
+        super().apply(player)

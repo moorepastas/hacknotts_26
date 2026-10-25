@@ -7,7 +7,7 @@ from classes.user import User
 
 from maze.battle import Enemy, Battle, Elements
 from maze.maze import Point, Compass
-from maze.player import Player, State
+from maze.player import Player, State, Skill
 
 
 class MazeChannel(Channel):
@@ -18,6 +18,26 @@ class MazeChannel(Channel):
         user.protocol.join(user.name(),"#maze")
         if user.nick not in self.players.keys():
             self.players[user.nick] = Player()
+
+        # send a join message
+        banner = """ #     #    #    ####### ####### 
+ ##   ##   # #        #  #       
+ # # # #  #   #      #   #       
+ #  #  # #     #    #    #####   
+ #     # #######   #     #       
+ #     # #     #  #      #       
+ #     # #     # ####### #######"""
+        for l in banner.splitlines():
+            user.protocol.privmsg("banner", "#maze", l)
+
+
+
+        user.protocol.privmsg("The_Dungeon_Master", "#maze", f"Welcome to the maze, hope you don't get lost")
+        self.exploring("dirs",self.players[user.nick],user)
+        if self.players[user.nick].tips:
+            self.exploring("help",self.players[user.nick],user)
+
+
 
 
 
@@ -41,7 +61,7 @@ class MazeChannel(Channel):
                 try:
                     comp = Compass[direction.capitalize()]
                 except NameError:
-                    user.protocol.privmsg("The_Dungeon_Master","#maze",f"{direction} is not a valid direction")
+                    user.protocol.privmsg("The_Dungeon_Master","#maze",f"{direction.capitalize()} is not a valid direction")
                     return
 
 
@@ -58,15 +78,18 @@ class MazeChannel(Channel):
                 player.pos  = Point(new_x,new_y)
 
                 user.protocol.privmsg("The_Dungeon_Master","#maze",f"You moved {direction}")
-                new, dirs = player.maze.explore(pos.x,pos.y)
-                user.protocol.privmsg("The_Dungeon_Master", "#maze",
-                                      f"You can move {", ".join([i.name for i in sorted(dirs, key=lambda x: x.value)])}")
+                new, dirs = player.maze.explore(new_x,new_y)
 
                 player.counter = max(player.counter - (10 if new else 2),0)
 
                 # if it hits a 0 it should trigger an encounter
                 if random.randint(0,player.counter) == 0:
-                    self.encounter()
+                    self.encounter(player,user)
+                    return
+
+                user.protocol.privmsg("The_Dungeon_Master", "#maze",
+                                      f"You can move {", ".join([i.name for i in sorted(dirs, key=lambda x: x.value)])}")
+
 
 
 
@@ -77,18 +100,25 @@ class MazeChannel(Channel):
                 user.protocol.privmsg("The_Dungeon_Master","#maze",f"You can move {", ".join([i.name for i in sorted(self.players[user.nick].maze.explore(pos.x,pos.y)[1], key=lambda x: x.value)])}")
             case ["map"]:
                 pos = self.players[user.nick].pos
-                user.protocol.privmsg("The_Dungeon_Master", "#maze","you consult the map")
+                user.protocol.privmsg("The_Dungeon_Master", "#maze","You consult the map")
 
                 lines = self.players[user.nick].maze.map(pos)
-                print(lines.split("\n"))
+
                 for line in lines.split("\n"):
                     if line.strip(" ") != "":
                         user.protocol.privmsg("map","#maze",line)
+            case ["help"]:
+                user.protocol.privmsg("help", "#maze", f"'move <direction>' will allow you to navigate the maze")
+                user.protocol.privmsg("help", "#maze", f"use 'dirs' to find available directions")
+                user.protocol.privmsg("help", "#maze", f"use 'map' to find your location")
+            case ["e"]:
+                self.encounter(player,user)
 
 
-    # triggers when encoutering a battle with an enemy
+
+    # triggers when encountering a battle with an enemy
     def encounter(self,player:Player, user:User):
-        name = random.choice(["ogre", "slime", "izangi","golden_hand"])
+        name = random.choice(["Ogre", "Slime", "Mage","Dog","Cat","Hacker"])
 
         difficulty = int(math.sqrt((player.pos.y**2)+(player.pos.x**2)))
 
@@ -99,8 +129,10 @@ class MazeChannel(Channel):
         player.battle = battle
         player.health = player.max_health
 
-        user.protocol.privmsg("The_Dungeon_Master","#maze",f"{name} has appeared, take e'm down.")
+        user.protocol.privmsg("The_Dungeon_Master","#maze",f"A {name} has appeared, take e'm down.")
         player.state = State.BATTLING
+        if player.tips:
+            self.battling("help",player,user)
 
     def battling(self, message, player, user:User):
         args = message.lower().split()
@@ -113,30 +145,44 @@ class MazeChannel(Channel):
                 user.protocol.privmsg("The_Dungeon_Master", "#maze", f"{player.battle.enemy.name} played {e_choice.name.lower()}")
                 p_choice = Elements[args[0].capitalize()]
 
-                if (e_choice==p_choice):
-                    user.protocol.privmsg("The_Dungeon_Master", "#maze",
+                if e_choice==p_choice:
+                    user.protocol.privmsg("Battle", "#maze",
                                           f"It appears you drew, nothing happened.")
-                elif ((e_choice+1)%3 == p_choice):
-                    user.protocol.privmsg("The_Dungeon_Master", "#maze",
+                elif (e_choice.value - 1)%3 == p_choice.value:
+                    user.protocol.privmsg("Battle", "#maze",
                                           f"It appears you lost, it hurt.")
                     player.health-=1
-                elif ((p_choice+1)%3 == e_choice):
-                    user.protocol.privmsg("The_Dungeon_Master", "#maze",
-                                          f"It appears you won, the enemy got hurt.")
+                elif (p_choice.value - 1)%3 == e_choice.value:
+                    user.protocol.privmsg("Battle", "#maze",
+                                          f"It appears you won that duel, the enemy got hurt.")
                     player.battle.enemy.health-=1
 
-            case ["skills"]:
-                for skill in player.skills:
-                    user.protocol.privmsg("The_Dungeon_Master", "#maze", skill)
+            case ["skill"]:
+                for skill_num,skill in enumerate(player.skills):
+                    user.protocol.privmsg("Battle", "#maze", f"{skill_num}) {skill}")
+
+                return
+
+            case ["skill", number]:
+                number = int(number)
+                player.skills[number].apply(player)
+                user.protocol.privmsg("Battle", "#maze", f"You used skill {player.skills[number].name}")
+
+            case ["help"]:
+                user.protocol.privmsg("Battle", "#maze","The battle system operates on rock/paper/scissors")
+                user.protocol.privmsg("Battle", "#maze", "Your health resets after every battle")
+                user.protocol.privmsg("Battle","#maze","you can use skills within battle to allow for more options")
+
 
             case _:
                 return
 
-
+        player.update_cooldowns()
         if player.battle.enemy.health == 0:
             user.protocol.privmsg("The_Dungeon_Master", "#maze", "The enemy has been defeated, you may return to exploring!")
             player.state = State.EXPLORING
             player.battle = None
+            player.counter =100
             return
 
         if player.health == 0:
@@ -149,7 +195,9 @@ class MazeChannel(Channel):
         # print the hud
         health_print  = lambda health : "# "*health
         user.protocol.privmsg("The_Dungeon_Master", "#maze",
-                              f"{user.nick} | {health_print(user.player.health)}")
+                              f"{user.nick} | {health_print(player.health)}")
+        user.protocol.privmsg("The_Dungeon_Master", "#maze",
+                              f"{player.battle.enemy.name} | {health_print(player.battle.enemy.health)}")
 
 
 
